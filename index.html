@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Stracts</title>
+    <style>
+        .container{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .controls, .range{
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        .column{
+            display: flex;
+            flex-direction: column;
+        }
+        .lateral{
+            flex: 1;
+        }
+        .center{
+            flex: 4;
+        }
+        #time-line{
+            width: 100%;
+        }
+        .register{
+            display: flex;
+        }
+        .screen{
+            border: solid red 2px;
+            z-index: 100;
+            position: fixed;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+        video{
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="column lateral">
+            <button id="capture_btn">Capturar</button>
+            <button id="finish_btn">Finalizar</button>
+        </div>
+        <div class="column center">
+            <div class="screen"></div>
+            <video>
+                <source src="/video"/>
+            </video>
+            <div class="range">
+                <input type="range" id="time-line" value="0">
+            </div>
+            <div class="controls">
+                <button id="play_btn">Play</button>
+                <button id="pause_btn">Pause</button>
+                <button id="next_frame_btn">+1</button>
+                <button id="prev_frame_btn">-1</button>
+            </div>
+        </div>
+        <div class="column lateral" id="history">
+
+        </div>
+    </div>
+</body>
+<script>
+    const $ = selector => document.querySelector(selector);
+    const $$ = selector => document.querySelectorAll(selector);
+
+    const $video = $('video');
+    const $screen = $('.screen');
+    const $play_btn = $('#play_btn');
+    const $pause_btn = $('#pause_btn');
+    const $time_line = $('#time-line');
+    const $next_frame_btn = $('#next_frame_btn');
+    const $prev_frame_btn = $('#prev_frame_btn');
+    const $history_div = $('#history');
+    const $capture_btn = $('#capture_btn');
+    const $finish_btn = $("#finish_btn");
+
+    const frameDuration = 1 / 24;
+    const frameTimeineDistance = 100 * frameDuration / $video.duration;
+
+    const STATES = {
+        mousedown : false,
+        SCREEN :{
+            x: undefined,
+            y: undefined,
+            width : undefined,
+            height : undefined
+        }
+    }
+
+    const images = [];
+
+    const changeCurrentTime = (time) =>
+    {
+        if(time < 0) $video.currentTime = 0;
+        else if(time > $video.duration) $video.currentTime = $video.duration;
+        else $video.currentTime = time;
+    }
+    const moveTimeLine = (pos) =>
+    {
+        if(pos < 0)$time_line.value = 0;
+        else if(pos > 100) $time_line.value = 100;
+        else $time_line.value = pos;
+    }
+    const changeCurrentTimeByPercentage = (per) => changeCurrentTime($video.duration * per / 100);
+    
+    const nextFrame = () => changeCurrentTime($video.currentTime + frameDuration);
+    const prevFrame = () => changeCurrentTime($video.currentTime - frameDuration);
+    const play = () => $video.play();
+    const pause = ()=> $video.pause();
+
+    const onMoveTimeLine = () => changeCurrentTimeByPercentage($time_line.value);
+    const onTimeUpdate = () => moveTimeLine( $video.currentTime * 100 / $video.duration);
+    
+    const getScreenInPercentages = () =>
+    {
+        const rectVideo = $video.getBoundingClientRect();
+        const rectScreen = $screen.getBoundingClientRect();
+        
+        return {
+            width : rectScreen.width * 100 / rectVideo.width,
+            height : rectScreen.height * 100 / rectVideo.height,
+            x: ((rectScreen.left - rectVideo.left) * 100) / rectVideo.width,
+            y: ((rectScreen.top - rectVideo.top) * 100) / rectVideo.height
+        }
+
+    }
+
+    const getStates = () =>
+    {
+        return { time : $video.currentTime, screen : getScreenInPercentages() }
+    }
+
+    const addNewRegister = (time) =>
+    {
+        const register = document.createElement('div');
+        const title = document.createElement('h3');
+        const button_delete = document.createElement('button');
+
+        register.value = {...getStates()};
+        register.className = 'register';
+        title.textContent = $history_div.childElementCount + 1;
+        button_delete.textContent = "X";
+
+        register.appendChild(title);
+        register.appendChild(button_delete);
+        $history_div.appendChild(register);
+
+        images.push(getStates());
+    }
+
+    const finish = () =>
+    {
+        fetch('/finish', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(images)})
+    }
+
+    const videoOnLoad = () =>
+    {
+        const rect = $video.getBoundingClientRect();
+
+        $screen.style.width = $video.videoWidth + 'px';
+        $screen.style.height = $video.videoHeight + 'px';
+        $screen.style.left = rect.left + "px";
+        $screen.style.top = rect.top + "px";
+
+        STATES.SCREEN.x = rect.left;
+        STATES.SCREEN.y = rect.top;
+        STATES.SCREEN.width = $video.videoWidth
+        STATES.SCREEN.height = $video.videoHeight
+    }
+
+    const screenOnMouseDown = () => STATES.mousedown = true;
+    const screenOnMouseUp = () => STATES.mousedown = false;
+
+    const onMouseMoove = (e) =>
+    {
+        if(STATES.mousedown)
+        {
+            
+            const rect = $screen.getBoundingClientRect();
+            const mediumWidth = rect.width / 2;
+            const mediumHeight = rect.height / 2;
+
+            if(e.clientX - rect.left > mediumWidth)
+            {
+                //DERECHA
+                const newWidth = e.clientX - STATES.SCREEN.x
+                $screen.style.width =  newWidth + 'px';
+                STATES.SCREEN.width = newWidth;
+            }
+            else
+            {
+                //IZQUIERDA
+                const newWidth = STATES.SCREEN.width - (e.clientX - STATES.SCREEN.x);
+                const newLeft = e.clientX;
+                $screen.style.width = newWidth + "px";
+                $screen.style.left = newLeft + "px";
+
+                STATES.SCREEN.width = newWidth;
+                STATES.SCREEN.x = newLeft;
+            }
+            if(e.clientY - rect.top > mediumHeight)
+            {
+                //ABAJO
+                const newHeight = e.clientY - STATES.SCREEN.y;
+                $screen.style.height = newHeight + "px";
+                STATES.SCREEN.height = newHeight;
+            }
+            else
+            {
+                //ARRIBA
+                const newHeight = STATES.SCREEN.height - (e.clientY - STATES.SCREEN.y);
+                const newTop = e.clientY;
+                $screen.style.height = newHeight + "px";
+                $screen.style.top = newTop + "px";
+
+                STATES.SCREEN.height = newHeight;
+                STATES.SCREEN.y = newTop;
+            }
+        }
+    }
+
+    $play_btn.onclick = play;
+    $pause_btn.onclick = pause;
+    $time_line.onchange = onMoveTimeLine;
+    $next_frame_btn.onclick = nextFrame;
+    $prev_frame_btn.onclick = prevFrame;
+    $video.ontimeupdate = onTimeUpdate;
+    $video.onloadeddata = videoOnLoad;
+    $capture_btn.onclick = addNewRegister;
+    $finish_btn.onclick = finish;
+    $video.onmousedown = screenOnMouseDown;
+    $video.onmouseup = screenOnMouseUp;
+    $video.onmousemove = onMouseMoove;
+</script>
+</html>
