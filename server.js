@@ -3,6 +3,7 @@ const { resolve } = require('path');
 const express = require('express');
 const ffmpeg = require('fluent-ffmpeg');
 const Events = require('events');
+const applyFilter = require('./filters');
 const emmiter = new Events();
 
 const server = (PORT, file) =>
@@ -23,7 +24,7 @@ const server = (PORT, file) =>
         console.log(req.body);
         if (!fs.existsSync(outputDir)){ fs.mkdirSync(outputDir) };
 
-        const promises = req.body.map(({ time, screen }, i) => new Promise((resolvePr, rejectPr) =>
+        const promises = req.body.map(({ time, screen, filter }, i) => new Promise((resolvePr, rejectPr) =>
         {
             const outputFrame = resolve(outputDir, `${i}.jpg`);
 
@@ -53,7 +54,15 @@ const server = (PORT, file) =>
                 ffmpeg(filePath)
                 .on('end', () => {
                     console.log(`Frame extraído en: ${outputFrame}`);
-                    resolvePr();
+                    applyFilter(outputFrame, filter)
+                    .then(() =>
+                    {
+                        resolvePr();
+                    })
+                    .catch(err => 
+                    {
+                        rejectPr(err);
+                    });
                 })
                 .on('error', (err) => {
                     console.error(`Error extrayendo frame en ${time}s: ${err.message}`);

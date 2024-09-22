@@ -42,11 +42,107 @@
             padding: 0;
             margin: 0;
         }
+
+                /* Filtro Normal (sin cambios) */
+        .filter-normal {
+            filter: none;
+        }
+
+        /* Filtro Clarendon */
+        .filter-clarendon {
+            filter: contrast(1.4) saturate(1.35);
+        }
+
+        /* Filtro Gingham */
+        .filter-gingham {
+            filter: contrast(1.1) brightness(1.2) sepia(0.1);
+        }
+
+        /* Filtro Moon */
+        .filter-moon {
+            filter: grayscale(1) contrast(1.1) brightness(1.1);
+        }
+
+        /* Filtro Lark */
+        .filter-lark {
+            filter: brightness(1.2) contrast(0.9) saturate(1.5);
+        }
+
+        /* Filtro Reyes */
+        .filter-reyes {
+            filter: sepia(0.22) brightness(1.1) contrast(0.85) saturate(0.75);
+        }
+
+        /* Filtro Juno */
+        .filter-juno {
+            filter: contrast(1.15) saturate(1.8);
+        }
+
+        /* Filtro Slumber */
+        .filter-slumber {
+            filter: sepia(0.35) saturate(1.2) contrast(0.9) brightness(1.05);
+        }
+
+        /* Filtro Crema */
+        .filter-crema {
+            filter: sepia(0.5) contrast(1.25) brightness(1.1);
+        }
+
+        /* Filtro Ludwig */
+        .filter-ludwig {
+            filter: brightness(1.05) contrast(1.1) saturate(1.25);
+        }
+
+        /* Filtro Aden */
+        .filter-aden {
+            filter: brightness(1.2) contrast(0.9) saturate(0.85) sepia(0.2);
+        }
+
+        /* Filtro Perpetua */
+        .filter-perpetua {
+            filter: brightness(1.1) contrast(1.1) saturate(1.25);
+        }
+
+        /* Filtro Amaro */
+        .filter-amaro {
+            filter: brightness(1.1) contrast(0.9) saturate(1.5);
+        }
+
+        /* Filtro Mayfair */
+        .filter-mayfair {
+            filter: contrast(1.1) saturate(1.1);
+        }
+
+        /* Filtro Valencia */
+        .filter-valencia {
+            filter: sepia(0.15) saturate(1.5) contrast(0.9) brightness(1.1);
+        }
+
+        /* Filtro X-Pro II */
+        .filter-xpro2 {
+            filter: sepia(0.3) contrast(1.5) brightness(0.9) saturate(1.7);
+        }
+
+        /* Filtro Lo-Fi */
+        .filter-lofi {
+            filter: contrast(1.5) saturate(1.8);
+        }
+
+        /* Filtro Inkwell */
+        .filter-inkwell {
+            filter: grayscale(1);
+        }
+
+        /* Filtro Nashville */
+        .filter-nashville {
+            filter: sepia(0.25) brightness(1.15) contrast(1.1) saturate(1.2);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="column lateral">
+            <select id="filter-select"></select>
             <button id="capture_btn">Capturar</button>
             <button id="finish_btn">Finalizar</button>
         </div>
@@ -84,6 +180,23 @@
     const $history_div = $('#history');
     const $capture_btn = $('#capture_btn');
     const $finish_btn = $("#finish_btn");
+    const $filter_select = $('#filter-select');
+
+    const instagramFilters =
+    [
+        "filter-normal",    "filter-clarendon", "filter-gingham",   "filter-moon",      "filter-lark",
+        "filter-reyes",     "filter-juno",      "filter-slumber",   "filter-crema",     "filter-ludwig",
+        "filter-aden",      "filter-perpetua",  "filter-amaro",     "filter-mayfair",   "filter-valencia",
+        "filter-xpro2",     "filter-lofi",      "filter-inkwell",   "filter-nashville"
+    ];
+
+    instagramFilters.forEach(f =>
+    {
+        const option = document.createElement('option');
+        option.value = f;
+        option.textContent = f;
+        $filter_select.appendChild(option);
+    });
 
     const frameDuration = 1 / 24;
     const frameTimeineDistance = 100 * frameDuration / $video.duration;
@@ -138,7 +251,7 @@
 
     const getStates = () =>
     {
-        return { time : $video.currentTime, screen : getScreenInPercentages() }
+        return { time : $video.currentTime, screen : getScreenInPercentages(), filter : $filter_select.value }
     }
 
     const addNewRegister = (time) =>
@@ -230,6 +343,8 @@
         }
     }
 
+    const filterSelectOnChange = () => { $video.className = $filter_select.value };
+
     $play_btn.onclick = play;
     $pause_btn.onclick = pause;
     $time_line.onchange = onMoveTimeLine;
@@ -242,5 +357,7 @@
     $video.onmousedown = screenOnMouseDown;
     $video.onmouseup = screenOnMouseUp;
     $video.onmousemove = onMouseMoove;
+    $filter_select.onchange = filterSelectOnChange;
+
 </script>
 </html>
